@@ -25,6 +25,7 @@ Every test XML file MUST include:
 - **All attributes** for each element (including optional ones)
 - **All complex types** with representative examples
 - **Multiple instances** of repeatable elements where applicable
+- **Both literal and expression forms** for every attribute that supports expression substitution (see Section 1a)
 
 **Coverage Checklist:**
 - [ ] All top-level elements (e.g., `realm`, `provider`, `secure-deployment`, `secure-server`)
@@ -32,6 +33,22 @@ Every test XML file MUST include:
 - [ ] All optional elements (at least one instance)
 - [ ] All attributes (including optional ones like `algorithm` on credentials)
 - [ ] Multiple instances of elements that can appear multiple times
+- [ ] Each attribute appears at least once as a plain literal value
+- [ ] Each attribute appears at least once as a `${property:default}` expression
+
+### 1a. Expression Coverage Requirements
+
+WildFly subsystem tests verify that both literal values and expression-substituted values can be parsed and round-tripped through the management model. **For every attribute that supports expressions** (defined with `.setAllowExpression(true)` in the Java attribute builder), the test XML must include at least one literal instance and at least one `${...}` expression instance somewhere across all entries of that complex type.
+
+**Recommended pattern**: Maintain one "full literal" entry and one "full expression" entry for each complex type, rather than spreading coverage thinly across many sparse entries. For example:
+- A `google` provider entry that includes every possible provider attribute as a literal value
+- A `redhat-sso-expressions` provider entry that includes every possible provider attribute as an expression
+
+This makes it easy to verify coverage at a glance and ensures new attributes added to the schema are added to both entries.
+
+**Resource path key attributes are exempt**: The `name` attribute on elements like `credential` and `redirect-rewrite-rule` is the WildFly management address path key, NOT a model attribute. It is registered via `PathElement.pathElement(...)`, not via `SimpleAttributeDefinitionBuilder`, and does NOT support expression substitution. These `name` keys do not need expression coverage.
+
+**Alternative attributes**: Some attributes are defined as mutually exclusive alternatives (via `.setAlternatives(...)` in Java, e.g., `auth-server-url` and `provider-url`). Combined coverage across all entries satisfies the requirement — one entry can use `auth-server-url` and another can use `provider-url`, and each needs both a literal and expression form across those combined entries.
 
 ### 2. Element Ordering Requirements
 
@@ -71,6 +88,12 @@ Schema versions are cumulative - each new version builds upon the previous one:
 - **Preview 4.0**: Base + 2.0 + preview-2.0 + preview-3.0 + preview-4.0 elements (e.g., OIDC logout)
 
 **Best Practice**: When creating a new version's test file, start by copying the previous version's test file, update the namespace, then add only the new elements introduced in that version.
+
+**Coverage propagation is mandatory**: When a coverage gap is discovered and fixed in an earlier version's test file (e.g., adding a missing literal to `1.0.xml`), that fix MUST be propagated to ALL subsequent versions. Each file should be logically identical to its predecessor except for:
+1. The namespace URI (e.g., `urn:wildfly:elytron-oidc-client:1.0` → `urn:wildfly:elytron-oidc-client:2.0`)
+2. New attributes/elements added by that schema version (added to the "full literal" and "full expression" entries)
+
+Failing to cascade coverage fixes forward means later versions will silently have the same gap.
 
 ### 4. Test Values
 
@@ -125,13 +148,17 @@ When reviewing or creating subsystem test files:
 
 - [ ] Test file exists for each schema version
 - [ ] Namespace in test XML matches schema version
-- [ ] All schema elements are represented at least once
-- [ ] All attributes (including optional) are included
+- [ ] All schema elements are represented at least once as a literal value
+- [ ] All schema elements are represented at least once as an expression (`${...}` form)
+- [ ] All attributes (including optional) are included in both literal and expression form
 - [ ] Element ordering matches marshaller output (verify by running tests)
 - [ ] Multiple instances of repeatable elements are included
 - [ ] Test values are realistic but clearly for testing
 - [ ] New version test files build upon previous versions
+- [ ] Coverage fixes in any version have been propagated to all later versions
 - [ ] Tests pass without comparison failures
+
+**Coverage verification strategy**: The most reliable way to verify expression coverage is to identify the "full literal" entry for each complex type and check it contains every attribute, then do the same for the "full expression" entry. Cross-file agent verification is prone to false positives — always confirm reported gaps by directly reading the XML before making changes.
 
 ## Common Pitfalls
 
@@ -140,6 +167,10 @@ When reviewing or creating subsystem test files:
 3. **Incomplete Coverage**: Missing even one element can leave gaps in validation
 4. **Copy-Paste Errors**: When copying from previous versions, update all version-specific references
 5. **Namespace Mismatches**: Ensure namespace exactly matches the schema version
+6. **Expression Coverage Gaps**: Forgetting that each attribute needs BOTH a literal and expression form, not just one
+7. **Not Cascading Fixes**: Fixing a gap in one version but forgetting to apply the same fix to all later versions
+8. **Confusing Path Keys with Model Attributes**: The `name` attribute on credentials and redirect-rewrite-rules is a management resource address key — it doesn't support expressions and doesn't need expression coverage
+9. **Agent False Positives in Coverage Checks**: Automated agents scanning XML for coverage can miss entries that exist in different parts of the file. Always verify a reported gap by manually reading the XML before acting on it. Confirmed gaps will also exist identically in all versions derived from the one with the gap.
 
 ## Example: Adding a New Element
 
