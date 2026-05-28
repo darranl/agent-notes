@@ -1,0 +1,3 @@
+{"id":"b881e3f9-9e1e-42df-8b53-9af3b61ab95a","ts":"2026-05-28T11:11:37.491Z","path":"/home/darranl/src/2026/agent-notes/AGENTS.md","version":"1.0.0","taskID":"32ba7c45-1824-4eae-a40d-0adba794ba66"}
+{"id":"5921b882-56bd-455d-b9c2-49812194893f","ts":"2026-05-28T11:12:08.056Z","path":"/home/darranl/src/2026/agent-notes/README.md","version":"1.0.0","taskID":"32ba7c45-1824-4eae-a40d-0adba794ba66"}
+{"id":"7806df31-7dac-4dec-be91-5d6cf5eba5d7","ts":"2026-05-28T11:12:25.182Z","path":"/home/darranl/src/2026/agent-notes/AGENTS.md","version":"1.0.0","taskID":"32ba7c45-1824-4eae-a40d-0adba794ba66"}
