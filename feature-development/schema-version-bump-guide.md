@@ -30,6 +30,7 @@ The schema version bump touches these core files:
 2. **[`ElytronOidcExtension.java`](../wildfly/elytron-oidc-client/src/main/java/org/wildfly/extension/elytron/oidc/ElytronOidcExtension.java)** - Registers schema parsers
 3. **Schema XSD files** - XML schema definition files in `src/main/resources/schema/`
 4. **Parser classes** - Classes that parse each schema version (e.g., `ElytronOidcSubsystemParser_X_Y.java`)
+5. **[`VERSIONS.md`](../wildfly/elytron-oidc-client/VERSIONS.md)** - Version history documentation (must be updated)
 
 ## Pre-Bump Checklist
 
@@ -1571,6 +1572,7 @@ For a pure schema version bump:
 - [ ] Create or reuse parser class for new schema version
 - [ ] Add test XML files for new schema version
 - [ ] Update test cases to cover new schema version
+- [ ] **Update `VERSIONS.md`** with the new schema version(s) and target WildFly version
 - [ ] Verify compilation succeeds
 - [ ] Run tests to verify schema parsing and validation
 - [ ] Verify backward compatibility (old schemas still parse)

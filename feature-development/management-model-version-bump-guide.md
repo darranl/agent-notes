@@ -28,6 +28,7 @@ The management model version bump touches these core files:
 1. **[`ElytronOidcClientSubsystemModel.java`](../wildfly/elytron-oidc-client/src/main/java/org/wildfly/extension/elytron/oidc/ElytronOidcClientSubsystemModel.java)** - Defines model versions
 2. **[`ElytronOidcExtension.java`](../wildfly/elytron-oidc-client/src/main/java/org/wildfly/extension/elytron/oidc/ElytronOidcExtension.java)** - Registers the current version
 3. **[`ElytronOidcSubsystemTransformers.java`](../wildfly/elytron-oidc-client/src/main/java/org/wildfly/extension/elytron/oidc/ElytronOidcSubsystemTransformers.java)** - Handles backward compatibility
+4. **[`VERSIONS.md`](../wildfly/elytron-oidc-client/VERSIONS.md)** - Version history documentation (must be updated)
 
 ## Pre-Bump Checklist
 
@@ -115,6 +116,13 @@ public void initialize(ExtensionContext context) {
 2. Add the method call to the chain in `registerTransformers()`
 3. Add the previous version to the target versions array in `buildAndRegister()`
 
+**CRITICAL: Method Ordering**:
+- **The `fromX()` methods MUST be defined in ASCENDING order in the file** (from2, from3, from4, from5, from6)
+- This is the opposite of how they are CALLED in `registerTransformers()` (which calls them in descending order: from6, from5, from4...)
+- **Incorrect ordering will cause confusion during code review and makes the code harder to maintain**
+- When adding a new `fromX()` method, place it at the END of the transformer methods, just before the closing brace of the class
+- Example: When adding `from6()`, it should be defined AFTER `from5()` in the file, even though it's called BEFORE `from5()` in `registerTransformers()`
+
 **Example Pattern**:
 ```java
 @Override
@@ -124,6 +132,7 @@ public void registerTransformers(SubsystemTransformerRegistration registration) 
             registration.getCurrentSubsystemVersion()
         );
 
+    // Methods are CALLED in descending order (newest to oldest)
     // 6.0.0 (WildFly 41) to 5.0.0 (WildFly 40)  <-- NEW
     from6(chainedBuilder);
     // 5.0.0 (WildFly 40) to 4.0.0 (WildFly 33)
@@ -139,6 +148,9 @@ public void registerTransformers(SubsystemTransformerRegistration registration) 
     });
 }
 
+// Methods are DEFINED in ascending order (oldest to newest)
+// ... from2(), from3(), from4(), from5() defined above ...
+
 private static void from6(ChainedTransformationDescriptionBuilder chainedBuilder) {
     ResourceTransformationDescriptionBuilder builder =
         chainedBuilder.createBuilder(
@@ -150,6 +162,8 @@ private static void from6(ChainedTransformationDescriptionBuilder chainedBuilder
     // For a pure version bump with no model changes, this can be empty
 }
 ```
+
+**Note on Method Ordering**: The transformer methods are called in descending order (from6, from5, from4...) in `registerTransformers()`, but they must be defined in the file in ascending order (from2, from3, from4, from5, from6). This maintains code readability and follows the natural progression of version history.
 
 **Important Notes**:
 - The transformer method defines how to transform FROM the new version TO the previous version
@@ -230,9 +244,10 @@ After making the changes, verify:
 
 1. **Compilation**: The code compiles without errors
 2. **Version Consistency**: All references to the new version are consistent
-3. **Transformer Chain**: The transformer chain is properly ordered (newest to oldest)
-4. **Target Versions Array**: All intermediate versions are included in the array
-5. **Comments**: WildFly version comments are accurate and helpful
+3. **Transformer Chain Call Order**: The transformer chain calls in `registerTransformers()` are properly ordered (newest to oldest: from6, from5, from4...)
+4. **Transformer Method Definition Order**: The `fromX()` method definitions in the file are in ascending order (from2, from3, from4, from5, from6)
+5. **Target Versions Array**: All intermediate versions are included in the array
+6. **Comments**: WildFly version comments are accurate and helpful
 
 ## Common Patterns and Best Practices
 
@@ -409,13 +424,15 @@ For a pure management model version bump:
 - [ ] Update `CURRENT` constant to point to new version
 - [ ] Add WildFly version comment to new constant
 - [ ] Add static import for new version in `ElytronOidcSubsystemTransformers.java`
-- [ ] Create new `fromX()` transformer method
-- [ ] Add `fromX()` call to transformer chain in `registerTransformers()`
+- [ ] Create new `fromX()` transformer method in ascending order (after the previous `fromX-1()` method)
+- [ ] Add `fromX()` call to transformer chain in `registerTransformers()` (in descending order, before the previous `fromX-1()` call)
 - [ ] Add previous version to target versions array in `buildAndRegister()`
 - [ ] Update transformer tests if needed (typically only when adding new controller version to test against)
+- [ ] **Update `VERSIONS.md`** with the new model version and target WildFly version
 - [ ] Verify compilation succeeds
 - [ ] Run transformer tests to verify backward compatibility
-- [ ] Verify transformer chain order is correct
+- [ ] Verify transformer chain call order is correct (descending: from6, from5, from4...)
+- [ ] Verify transformer method definition order is correct (ascending: from2, from3, from4, from5, from6)
 - [ ] Document the reason for the version bump
 
 ---
