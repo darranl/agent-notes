@@ -35,6 +35,7 @@ Every test XML file MUST include:
 - [ ] Multiple instances of elements that can appear multiple times
 - [ ] Each attribute appears at least once as a plain literal value
 - [ ] Each attribute appears at least once as a `${property:default}` expression
+- [ ] Each root element has at least one minimal entry (name only, no optional children)
 
 ### 1a. Expression Coverage Requirements
 
@@ -49,6 +50,32 @@ This makes it easy to verify coverage at a glance and ensures new attributes add
 **Resource path key attributes are exempt**: The `name` attribute on elements like `credential` and `redirect-rewrite-rule` is the WildFly management address path key, NOT a model attribute. It is registered via `PathElement.pathElement(...)`, not via `SimpleAttributeDefinitionBuilder`, and does NOT support expression substitution. These `name` keys do not need expression coverage.
 
 **Alternative attributes**: Some attributes are defined as mutually exclusive alternatives (via `.setAlternatives(...)` in Java, e.g., `auth-server-url` and `provider-url`). Combined coverage across all entries satisfies the requirement — one entry can use `auth-server-url` and another can use `provider-url`, and each needs both a literal and expression form across those combined entries.
+
+### 1b. Minimal Configuration Coverage
+
+> **⚠ BLOCKED** — Implementation is pending a schema bug fix. See
+> `notes/bug-xsd-all-minoccurs-empty-elements.md` for details. Do not add
+> minimal entries to test XML files until the bug is resolved.
+
+In addition to the "full literal" and "full expression" coverage patterns, each root element in the subsystem must have at least one **minimal** entry — an entry that contains ONLY the management address `name` attribute, with NO optional child elements. This verifies:
+
+1. That every child element is truly optional and can be omitted without error
+2. That the subsystem can parse and round-trip a bare-bones configuration
+3. That no default marshalling logic requires child elements to be present
+
+**Pattern**: Use a self-closing tag with just the name attribute:
+```xml
+<realm name="minimal-realm"/>
+<provider name="minimal-provider"/>
+<secure-deployment name="minimal.war"/>
+<secure-server name="minimal-server"/>   <!-- versions 2.0+ only -->
+```
+
+**Propagation**: Like other coverage requirements, minimal entries must be propagated to all subsequent schema versions. If `1.0.xml` has a `<realm name="minimal-realm"/>`, all later versions must also include it.
+
+**Naming convention**: Use `minimal-` as a prefix (e.g., `minimal-realm`, `minimal-provider`) and `minimal.war` for deployments/servers to make their purpose immediately clear.
+
+**Known blocker**: The XSD schemas define `realm-type`, `provider-type`, and `secure-deployment-type` using `<xs:all>` without `minOccurs="0"` on the group itself. Xerces (the XML validator used by the test framework) rejects empty elements for these types even though every individual child element has `minOccurs="0"`. The fix is to add `minOccurs="0"` to the `<xs:all>` opening tag in each affected complex type across all five XSD schema files. Until that schema fix is applied, minimal entries fail `testSchema` with `cvc-complex-type.2.4.b`.
 
 ### 2. Element Ordering Requirements
 
@@ -156,6 +183,7 @@ When reviewing or creating subsystem test files:
 - [ ] Test values are realistic but clearly for testing
 - [ ] New version test files build upon previous versions
 - [ ] Coverage fixes in any version have been propagated to all later versions
+- [ ] Each root element has at least one minimal entry with no optional children
 - [ ] Tests pass without comparison failures
 
 **Coverage verification strategy**: The most reliable way to verify expression coverage is to identify the "full literal" entry for each complex type and check it contains every attribute, then do the same for the "full expression" entry. Cross-file agent verification is prone to false positives — always confirm reported gaps by directly reading the XML before making changes.
@@ -171,6 +199,7 @@ When reviewing or creating subsystem test files:
 7. **Not Cascading Fixes**: Fixing a gap in one version but forgetting to apply the same fix to all later versions
 8. **Confusing Path Keys with Model Attributes**: The `name` attribute on credentials and redirect-rewrite-rules is a management resource address key — it doesn't support expressions and doesn't need expression coverage
 9. **Agent False Positives in Coverage Checks**: Automated agents scanning XML for coverage can miss entries that exist in different parts of the file. Always verify a reported gap by manually reading the XML before acting on it. Confirmed gaps will also exist identically in all versions derived from the one with the gap.
+10. **Missing Minimal Configuration**: Only testing full configurations and forgetting to verify that entries with only the required name attribute (and no optional children) can be parsed and marshalled
 
 ## Example: Adding a New Element
 
@@ -183,9 +212,121 @@ When a new element is added to a schema:
 5. Run tests and adjust ordering if needed
 6. Verify all tests pass
 
+## Stability-Level-Specific Testing (OidcTestCase Pattern)
+
+Some subsystems use a separate test class (e.g., `OidcTestCase`) that validates runtime behavior by parsing configurations and checking loaded values. When a subsystem supports multiple stability levels (DEFAULT, COMMUNITY, PREVIEW), this test should be parameterized to test each CURRENT stability level independently.
+
+### Implementation Pattern
+
+Use JUnit parameterized tests to run the same test suite against each stability level:
+
+```java
+@RunWith(Parameterized.class)
+public class OidcTestCase extends AbstractSubsystemSchemaTest<ElytronOidcSubsystemSchema> {
+
+    @Parameters(name = "{0}")
+    public static Collection<ElytronOidcSubsystemSchema> parameters() {
+        return ElytronOidcSubsystemSchema.CURRENT.values();
+    }
+
+    public OidcTestCase(ElytronOidcSubsystemSchema schema) {
+        super(ElytronOidcExtension.SUBSYSTEM_NAME, new ElytronOidcExtension(),
+              schema, ElytronOidcSubsystemSchema.CURRENT.get(schema.getStability()));
+    }
+
+    @Override
+    protected String getSubsystemXml() throws IOException {
+        return readResource(String.format("oidc-%s.xml",
+            this.getSubsystemSchema().getStability().toString().toLowerCase()));
+    }
+}
+```
+
+### Test XML Files for Each Stability Level
+
+Create separate test XML files for each stability level:
+
+- `oidc-default.xml` - Uses DEFAULT stability namespace (e.g., `urn:wildfly:elytron-oidc-client:2.0`)
+- `oidc-community.xml` - Uses COMMUNITY stability namespace (e.g., `urn:wildfly:elytron-oidc-client:community:2.0`)
+- `oidc-preview.xml` - Uses PREVIEW stability namespace (e.g., `urn:wildfly:elytron-oidc-client:preview:4.0`)
+
+**Key Requirements:**
+- Each file must use the correct namespace for its stability level
+- Each file must include only features available at that stability level
+- Files should NOT include XML declarations (`<?xml version="1.0"?>`)
+- Element ordering must match marshaller output (alphabetical for `xs:all` schemas)
+
+### Conditional Test Execution
+
+Use `assumeTrue()` to skip tests for features not available at certain stability levels:
+
+```java
+@Test
+public void testPreviewOnlyFeature() throws Exception {
+    assumeTrue("Feature X is PREVIEW-only",
+        this.getSubsystemSchema().getStability() == Stability.PREVIEW);
+    // Test code here
+}
+```
+
+### Adding New Features
+
+When adding a new feature to the subsystem:
+
+1. **Determine the initial stability level** (usually PREVIEW)
+2. **Add the feature to the appropriate test XML file(s)**:
+   - If PREVIEW: Add to `oidc-preview.xml` only
+   - If COMMUNITY: Add to `oidc-community.xml` and `oidc-preview.xml`
+   - If DEFAULT: Add to all three files
+3. **Add tests for the new feature** with appropriate `assumeTrue()` guards
+4. **Update test XML files** to include both literal and expression forms of new attributes
+
+### Promoting Features Between Stability Levels
+
+When a feature is promoted from one stability level to another (e.g., PREVIEW → COMMUNITY):
+
+1. **Update the schema** to reflect the new stability level
+2. **Move feature entries between test XML files**:
+   - Remove from higher stability file (e.g., `oidc-preview.xml`)
+   - Add to lower stability file (e.g., `oidc-community.xml`)
+   - Ensure all lower stability files also get the feature
+3. **Update `assumeTrue()` conditions** in tests:
+   ```java
+   // Before (PREVIEW-only):
+   assumeTrue("Feature X is PREVIEW-only",
+       this.getSubsystemSchema().getStability() == Stability.PREVIEW);
+
+   // After (COMMUNITY and above):
+   assumeTrue("Feature X requires COMMUNITY or higher",
+       this.getSubsystemSchema().getStability().ordinal() >= Stability.COMMUNITY.ordinal());
+   ```
+4. **Verify all tests pass** for all stability levels
+
+### Test Execution Results
+
+When tests run correctly:
+- Total tests = (number of test methods) × (number of stability levels)
+- Skipped tests = (stability-restricted tests) × (number of stability levels where feature is unavailable)
+- Example: 30 test methods × 2 stability levels = 60 total tests
+  - If 6 tests are PREVIEW-only: 6 × 1 (DEFAULT run) = 6 skipped tests
+  - Result: 60 tests run, 54 passed, 6 skipped
+
+### Common Issues
+
+1. **XML Declaration in Test Files**: Test XML files should NOT include `<?xml version="1.0"?>` declarations. The test framework reads them as strings and the declaration causes parsing errors.
+
+2. **Element Ordering**: Marshalled XML outputs elements in a specific order (often alphabetical for `xs:all` schemas). Test XML files must match this order exactly.
+
+3. **Namespace Mismatches**: Each test XML must use the correct namespace for its stability level. Check `ElytronOidcSubsystemSchema` enum for the correct namespace URNs.
+
+4. **Missing Feature Removal**: When promoting a feature, don't forget to remove it from the higher stability test XML file. Leaving it in both files can cause confusion.
+
+5. **Incorrect assumeTrue() Logic**: When promoting features, update the stability check to use ordinal comparison (`>=`) rather than equality (`==`) if the feature should be available at multiple levels.
+
 ## References
 
 - XSD Schemas: `src/main/resources/schema/`
 - Test Files: `src/test/resources/org/wildfly/extension/{subsystem}/`
 - Test Class: `src/test/java/org/wildfly/extension/{subsystem}/{Subsystem}SubsystemTestCase.java`
 - Test Framework: `org.jboss.as.subsystem.test.AbstractSubsystemSchemaTest`
+- Stability Levels: `org.jboss.as.version.Stability` enum
