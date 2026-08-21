@@ -2,39 +2,49 @@
 
 This file provides guidance to agents when working with code in this repository.
 
-## Directory Overview
+## Quick Start
 
-This directory (`agent-notes`) is a Git-initialized repository intended for storing notes, documentation, and context related to agent interactions. Currently, the directory contains foundational documentation (this AGENTS.md file and README.md) and is ready to receive content.
+**ALWAYS start by reading [INDEX.md](INDEX.md)** - it provides:
+- Complete navigation to all documentation
+- Task-based guide lookup
+- Keyword search capabilities
+- Document structure conventions
 
-## Purpose
+## Repository Purpose
 
-Based on the directory name and README, this repository serves as a collection point for:
-- Notes about agent interactions and workflows
-- Documentation for AI assistant usage patterns
-- Context and instructions for future agent sessions
-- Project-specific guidance for AI-assisted development
+This repository contains notes, documentation, and context for AI agent interactions, particularly focused on WildFly development workflows and best practices.
 
-## Current State
+## Current Structure
 
-The repository has been initialized with:
-- **README.md**: Explains the repository's purpose and intended usage
-- **AGENTS.md**: This file, providing guidance to AI agents
-- **Git repository**: Version control is set up and ready
+```
+agent-notes/
+├── INDEX.md                          # START HERE - navigation index
+├── README.md                         # Repository overview
+├── AGENTS.md                         # This file - minimal agent guidance
+└── feature-development/              # WildFly development guides
+    ├── management-model-version-bump-guide.md
+    ├── schema-version-bump-guide.md
+    └── subsystem-schema-test-requirements.md
+```
 
-The repository is now ready to receive substantive content such as notes, documentation, and agent-specific instructions.
+## Key Principles for Agents
 
-## Usage
+1. **Use INDEX.md for navigation** - Don't load all files at once
+2. **Follow document structure** - All guides use consistent heading conventions (see INDEX.md)
+3. **Load only what you need** - Use INDEX.md to find relevant guides
+4. **Update as you work** - These are living documents
 
-As content is added to this repository, this AGENTS.md file should be updated to reflect:
-- The actual scope of notes being stored
-- Any organizational structure or conventions being followed
-- Key files and their purposes
-- How the information should be used by agents in future interactions
+## Document Conventions
 
-## Next Steps
+All documentation follows conventions detailed in INDEX.md:
+- Standard section markers (Overview, Process, Checklists, etc.)
+- Consistent heading levels for navigation
+- Visual markers (✅, ❌, ⚠️) for quick scanning
+- Cross-references between related documents
 
-To make this repository more useful, consider adding:
-- Organized subdirectories for different types of notes or contexts (e.g., `workflows/`, `project-contexts/`, `best-practices/`)
-- Specific agent instructions or workflows
-- Project-specific context that agents should be aware of
-- Templates for common note types
+See INDEX.md for complete details on navigation strategies and document structure.
+
+---
+
+**Last Updated**: 2026-08-21
+**Version**: 2.0
