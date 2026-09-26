@@ -49,6 +49,11 @@ Located in `feature-development/`:
   - **Related To**: Requires version bumps first; see version management guides below
   - **Prerequisites**: Coordinate version bumps in Zulip #wildfly-elytron before starting
 
+- **[elytron-doohickey-guide.md](feature-development/elytron-doohickey-guide.md)**
+  - **Purpose**: Explain ElytronDoohickey and how to adapt resources needing early runtime API access
+  - **Use When**: A resource must be available before its MSC service starts
+  - **Key Topics**: Dual runtime access paths, model resolution, service dependencies, immediate initialization, cycle detection
+
 #### Version Management
 - **[management-model-version-bump-guide.md](feature-development/management-model-version-bump-guide.md)**
   - **Purpose**: Guide for bumping WildFly subsystem management model versions
@@ -83,6 +88,7 @@ Located in `feature-development/`:
 | Override component versions | wildfly-development-workflow.md | wildfly-deployment-reproducer-guide.md |
 | Override Soteria version | jakarta-ee-security-patterns.md | wildfly-development-workflow.md |
 | Implement new subsystem feature | feature-implementation-guide.md | Both version bump guides + test requirements |
+| Adapt an Elytron resource for early runtime access | elytron-doohickey-guide.md | feature-implementation-guide.md |
 | Add management attribute | feature-implementation-guide.md | management-model-version-bump-guide.md |
 | Add XML configuration option | feature-implementation-guide.md | schema-version-bump-guide.md |
 | Bump management model version | management-model-version-bump-guide.md | schema-version-bump-guide.md |
@@ -124,6 +130,8 @@ Located in `feature-development/`:
 - **Schema/XSD**: schema-version-bump-guide.md, feature-implementation-guide.md
 - **Parser**: schema-version-bump-guide.md, feature-implementation-guide.md
 - **Runtime integration**: feature-implementation-guide.md
+- **ElytronDoohickey**: elytron-doohickey-guide.md
+- **Early runtime API access**: elytron-doohickey-guide.md
 - **Backward compatibility**: feature-implementation-guide.md, management-model-version-bump-guide.md
 - **System properties**: feature-implementation-guide.md
 - **Test coverage**: subsystem-schema-test-requirements.md
@@ -178,5 +186,5 @@ This index should be updated when:
 
 ---
 
-**Last Updated**: 2026-09-12
-**Index Version**: 1.3
+**Last Updated**: 2026-09-26
+**Index Version**: 1.4
