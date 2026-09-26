@@ -657,6 +657,110 @@ This pattern:
 - Default manifest filename lives in a property (overridable)
 - Profile only activates when explicitly requested (no channel overhead in default builds)
 
+## Common Pitfalls
+
+### ❌ Wrong Channel Configuration Parameter Name
+
+The wildfly-maven-plugin uses `<channels>`, not `<overrideFeatures>`.
+
+**Incorrect** (silently ignored with a warning):
+```xml
+<configuration>
+    <overrideFeatures>
+        <overrideFeature>
+            <manifest>${elytron.override.manifest}</manifest>
+        </overrideFeature>
+    </overrideFeatures>
+</configuration>
+```
+
+Maven output will show:
+```
+[WARNING] Parameter 'overrideFeatures' is unknown for plugin 'wildfly-maven-plugin:X.X.X:package'
+```
+
+The provisioned server will contain default artifacts instead of SNAPSHOT versions, and the override is silently ignored.
+
+**Correct**:
+```xml
+<configuration>
+    <channels>
+        <channel>
+            <manifest>
+                <url>file://${elytron.override.manifest}</url>
+            </manifest>
+        </channel>
+    </channels>
+</configuration>
+```
+
+Note the `<url>` wrapper around the file path.
+
+### ❌ Incompatible Manifest Schema Version
+
+The manifest schema version must be compatible with your wildfly-maven-plugin version.
+
+**Plugin version 6.0.1.Final and earlier**:
+```yaml
+schemaVersion: "1.1.0"  # ✅ Supported
+```
+
+**Schema version 2.1.0**:
+```yaml
+schemaVersion: "2.1.0"  # ❌ Not yet supported in 6.0.1.Final
+```
+
+Using an unsupported schema version causes:
+```
+[ERROR] Unknown schema version: 2.1.0
+```
+
+Always use `schemaVersion: "1.1.0"` for compatibility with current WildFly Maven Plugin versions. Check the [WildFly Channel specification](https://github.com/wildfly/wildfly-channel/blob/main/doc/spec.adoc) for schema version details.
+
+### ❌ Forgetting `mvn clean` After Changing Channels
+
+The wildfly-maven-plugin caches the provisioned server in `target/server`. If you:
+- Change the manifest file
+- Add/remove channel entries
+- Update stream versions
+
+**Always use `mvn clean package`** to force reprovisioning. Otherwise, the old provisioned artifacts remain.
+
+**Verification after build**:
+```bash
+# Check the actual provisioned artifact version
+find target/server/modules -name "*elytron-http-oidc*.jar"
+# Should show the SNAPSHOT version, not the release version
+
+# Verify module.xml references the correct version
+cat target/server/modules/system/layers/base/org/wildfly/security/elytron-http-oidc/main/module.xml | grep resource-root
+```
+
+### ❌ Missing `<url>` Wrapper for File-Based Manifests
+
+When using a local file path, wrap it in `<url>`:
+
+**Incorrect**:
+```xml
+<manifest>
+    <file>${project.basedir}/override.yaml</file>
+</manifest>
+```
+
+**Correct**:
+```xml
+<manifest>
+    <url>file://${project.basedir}/override.yaml</url>
+</manifest>
+```
+
+Or use an absolute path:
+```xml
+<manifest>
+    <url>file:///home/user/project/override.yaml</url>
+</manifest>
+```
+
 ## Summary: Development Workflow Checklist
 
 - [ ] Remote debugging documented in reproducer README (including `suspend=y` for boot debugging)
@@ -676,5 +780,5 @@ This pattern:
 
 ---
 
-**Last Updated**: 2026-08-28  
-**Version**: 1.2
+**Last Updated**: 2026-09-25  
+**Version**: 1.3

@@ -333,14 +333,15 @@ Every reproducer must include a `README.md` with:
 2. Prerequisites (JDK version, Maven version)
 3. Build command: `mvn clean package -DskipTests`
 4. Start command: `./start-server.sh`
-5. Curl examples for verification
-6. Expected vs actual results (table format)
-7. How to check server logs for evidence
-8. Stop command: `./stop-server.sh`
-9. **Development Workflows section** documenting:
-   - Remote debugging (normal and suspend modes)
-   - Component version override (if configured)
-   - WildFly SNAPSHOT workflow (if applicable)
+5. **Progress monitoring** — How to watch server startup (e.g., `tail -f ear/target/server/standalone/log/server.log`)
+6. Curl examples for verification
+7. Expected vs actual results (table format)
+8. How to check server logs for evidence
+9. Stop command: `./stop-server.sh`
+10. **Development Workflows section** documenting:
+    - Remote debugging (normal and suspend modes)
+    - Component version override (if configured)
+    - WildFly SNAPSHOT workflow (if applicable)
 
 For simple reproducers with one or two test scenarios, curl examples can be run directly. For reproducers with multiple test scenarios (e.g., testing different authentication mechanisms), see **Step 5.5: Test Client Script** for detailed implementation guidance.
 
@@ -398,7 +399,212 @@ After building and starting the server, verify by running curl commands individu
 grep "SomeRelevantMessage" ear/target/server/standalone/log/server.log
 ```
 
+## External Dependencies (Keycloak, Databases, etc.)
+
+Some reproducers require external services like Keycloak (for OIDC), databases, or message brokers. Manage these with containers (Podman/Docker) in a `containers/` subdirectory.
+
+### Container Naming Convention
+
+**❌ Wrong** — Generic container names conflict across projects:
+```bash
+CONTAINER_NAME="keycloak"
+VOLUME_NAME="keycloak-data"
+```
+
+If you work on multiple reproducers that use Keycloak, starting one will conflict with or stop containers from another project.
+
+**✅ Correct** — Use project-specific suffixes:
+```bash
+CONTAINER_NAME="keycloak-my-reproducer"
+VOLUME_NAME="keycloak-data-my-reproducer"
+```
+
+Replace `my-reproducer` with your project's artifactId or a short identifier. This allows multiple Keycloak instances to coexist.
+
+### Container Directory Structure
+
+```
+containers/
+└── keycloak/
+    ├── README.md                    # Container-specific documentation
+    ├── start-keycloak.sh            # Idempotent start script
+    ├── stop-keycloak.sh             # Clean shutdown script
+    └── setup-realm.sh               # Configure Keycloak (create realms, clients, users)
+```
+
+### Container Start Script Pattern
+
+Make start scripts idempotent (safe to run when already running):
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+CONTAINER_NAME="keycloak-my-reproducer"
+IMAGE="quay.io/keycloak/keycloak:latest"
+VOLUME_NAME="keycloak-data-my-reproducer"
+HOST_PORT="8180"              # Avoid conflict with WildFly on 8080
+CONTAINER_PORT="8080"
+
+# Create volume if it doesn't exist
+if ! podman volume inspect "$VOLUME_NAME" &>/dev/null; then
+    echo "Creating Podman volume '$VOLUME_NAME'..."
+    podman volume create "$VOLUME_NAME"
+fi
+
+# Handle existing container
+if podman container exists "$CONTAINER_NAME" 2>/dev/null; then
+    STATUS=$(podman inspect --format '{{.State.Status}}' "$CONTAINER_NAME")
+    if [ "$STATUS" = "running" ]; then
+        echo "Keycloak is already running: http://localhost:$HOST_PORT"
+        exit 0
+    else
+        echo "Starting existing container..."
+        podman start "$CONTAINER_NAME"
+        echo "Keycloak started: http://localhost:$HOST_PORT"
+        exit 0
+    fi
+fi
+
+echo "Starting Keycloak ${IMAGE}..."
+podman run -d \
+    --name "$CONTAINER_NAME" \
+    -p "${HOST_PORT}:${CONTAINER_PORT}" \
+    -e KC_BOOTSTRAP_ADMIN_USERNAME=admin \
+    -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+    -v "${VOLUME_NAME}:/opt/keycloak/data:Z" \
+    "$IMAGE" \
+    start-dev
+
+echo "Keycloak starting on http://localhost:$HOST_PORT"
+echo "Startup takes 15-30 seconds. Watch progress with:"
+echo "  podman logs -f $CONTAINER_NAME"
+echo ""
+echo "Wait until you see Keycloak startup complete messages, then press Ctrl+C"
+```
+
+### Container Stop Script Pattern
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+CONTAINER_NAME="keycloak-my-reproducer"
+
+if podman container exists "$CONTAINER_NAME" 2>/dev/null; then
+    echo "Stopping $CONTAINER_NAME..."
+    podman stop "$CONTAINER_NAME"
+    echo "Container stopped (not removed — data persists in volume)"
+else
+    echo "Container $CONTAINER_NAME not found"
+fi
+```
+
+### Port Mapping Strategy
+
+Map external services to non-conflicting ports:
+
+| Service | Default Port | Mapped Host Port | Reason |
+|---------|-------------|------------------|--------|
+| WildFly | 8080 | 8080 | Primary application server |
+| Keycloak | 8080 | 8180 | Avoids conflict with WildFly |
+| PostgreSQL | 5432 | 5432 | Standard (usually no conflict) |
+| Management console | 9990 | 9990 | WildFly management |
+
+### README Documentation for External Dependencies
+
+Document the external dependency in the reproducer's README.
+
+**Critical Pattern**: Whenever you tell users to wait for a service to start, **always provide a way to check progress**. Never say "wait X seconds" without giving a command to monitor startup.
+
+```markdown
+## Prerequisites
+
+- JDK 17+
+- Maven 3.9+
+- Podman or Docker
+
+## Setup
+
+### 1. Start Keycloak
+
+```bash
+./containers/keycloak/start-keycloak.sh
+```
+
+**Watch Keycloak startup progress:**
+```bash
+podman logs -f keycloak-my-reproducer
+```
+
+Wait until you see startup complete messages, then press `Ctrl+C`.
+
+Alternatively, poll the health endpoint:
+```bash
+# Wait for Keycloak to be ready
+until curl -s http://localhost:8180/health/ready > /dev/null; do
+    echo "Waiting for Keycloak..."
+    sleep 2
+done
+echo "Keycloak is ready"
+```
+
+### 2. Configure Keycloak Realm
+
+```bash
+./containers/keycloak/setup-realm.sh
+```
+
+This creates:
+- Realm: `WildFly`
+- Client: `test-webapp` with generated secret
+- Users: `alice` / `alice`, `bob` / `bob`
+
+The client secret is written to `scripts/keycloak.properties` (gitignored).
+
+### 3. Build and Start WildFly
+
+```bash
+mvn clean package -DskipTests
+./start-server.sh
+```
+```
+
 ## Common Pitfalls
+
+### ❌ Telling users to "wait" without providing a progress check
+
+Never tell users to "wait 15-30 seconds" without giving them a way to monitor progress.
+
+**❌ Wrong**:
+```markdown
+Start Keycloak and wait 30 seconds for it to be ready.
+```
+
+**✅ Correct**:
+```markdown
+Start Keycloak:
+```bash
+./containers/keycloak/start-keycloak.sh
+```
+
+Watch startup progress:
+```bash
+podman logs -f keycloak-my-reproducer
+```
+
+Wait until you see startup complete messages, then press `Ctrl+C`.
+```
+
+This pattern applies to:
+- Container startup (use `podman logs -f` or `docker logs -f`)
+- WildFly server startup (use `tail -f standalone/log/server.log` or grep for `WFLYSRV0025`)
+- Database initialization (use container logs or connection test commands)
+- Any service that takes >5 seconds to become ready
+
+### ❌ Using generic container names for external dependencies
+
+Container names like `keycloak` or `postgres` conflict when working on multiple reproducers. Always use project-specific names (e.g., `keycloak-my-reproducer`). See **External Dependencies** section above for the complete pattern.
 
 ### ❌ Running `mvn package` without `clean` after config changes
 
@@ -434,6 +640,8 @@ This shows all available versions with release dates, preventing build failures 
 - [ ] Galleon layers selected from WildFly Galleon Guide documentation
 - [ ] `core-tools` layer included
 - [ ] CLI scripts created for any server configuration
+- [ ] External dependencies (Keycloak, databases) use project-specific container/volume names
+- [ ] External dependency start/stop scripts are idempotent
 - [ ] `start-server.sh` and `stop-server.sh` scripts created with `--debug` and `--suspend` support
 - [ ] `test-client.sh` created (if multiple test scenarios)
 - [ ] `README.md` written with build/run/verify instructions
@@ -444,5 +652,5 @@ This shows all available versions with release dates, preventing build failures 
 
 ---
 
-**Last Updated**: 2026-08-28
-**Version**: 1.1
+**Last Updated**: 2026-09-25
+**Version**: 1.2
