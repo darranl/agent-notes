@@ -51,8 +51,8 @@ Located in `feature-development/`:
 
 - **[elytron-doohickey-guide.md](feature-development/elytron-doohickey-guide.md)**
   - **Purpose**: Explain ElytronDoohickey and how to adapt resources needing early runtime API access
-  - **Use When**: A resource must be available before its MSC service starts
-  - **Key Topics**: Dual runtime access paths, model resolution, service dependencies, immediate initialization, cycle detection
+  - **Use When**: A resource must be available before its MSC service starts; an external extension needs to join the Elytron lock
+  - **Key Topics**: Dual runtime access paths, model resolution, service dependencies, immediate initialization, cycle detection, `DoohickeySimultaneity`, capability leak (`WFLYCTL0436`), service lifecycle (`reset`, `onReset`, `asValueSupplier`), how to identify doohickey-adapted resources
 
 #### Version Management
 - **[management-model-version-bump-guide.md](feature-development/management-model-version-bump-guide.md)**
@@ -66,6 +66,20 @@ Located in `feature-development/`:
   - **Use When**: Changing XML configuration format, adding/removing elements, promoting stability levels
   - **Key Topics**: Schema versioning, XSD files, parser registration, stability level annotations
   - **Related To**: Management model version bumps (often coordinated); prerequisite for feature implementation
+
+### Lessons Learnt
+
+Located in `lessons-learnt/`:
+
+- **[wflyctl0436-capability-leak.md](lessons-learnt/wflyctl0436-capability-leak.md)**
+  - **Purpose**: Documents the capability-leak bug and fix for `WFLYCTL0436` on same-name resource remove/re-add
+  - **Use When**: Implementing doohickey support for a new resource; reviewing a resource add/remove handler pair; diagnosing `WFLYCTL0436` errors
+  - **Key Topics**: `DoohickeyAddHandler.createRemoveHandler()`, deregistering API capabilities on remove, test strategy
+
+- **[doohickey-over-eager-adaptation.md](lessons-learnt/doohickey-over-eager-adaptation.md)**
+  - **Purpose**: Documents why LDAP key-store was removed from early-access scope and the general rule for deciding when NOT to add doohickey support
+  - **Use When**: Considering whether to adapt a new Elytron resource for early runtime access; reviewing `createImmediately` implementations that depend on optional security configuration
+  - **Key Topics**: Partial early initialization, silently degraded security behavior, when service-only is the right answer
 
 #### Testing Requirements
 - **[subsystem-schema-test-requirements.md](feature-development/subsystem-schema-test-requirements.md)**
@@ -88,7 +102,10 @@ Located in `feature-development/`:
 | Override component versions | wildfly-development-workflow.md | wildfly-deployment-reproducer-guide.md |
 | Override Soteria version | jakarta-ee-security-patterns.md | wildfly-development-workflow.md |
 | Implement new subsystem feature | feature-implementation-guide.md | Both version bump guides + test requirements |
-| Adapt an Elytron resource for early runtime access | elytron-doohickey-guide.md | feature-implementation-guide.md |
+| Adapt an Elytron resource for early runtime access | elytron-doohickey-guide.md | feature-implementation-guide.md, lessons-learnt/doohickey-over-eager-adaptation.md |
+| Decide if a resource should get early-access support | lessons-learnt/doohickey-over-eager-adaptation.md | elytron-doohickey-guide.md |
+| Fix WFLYCTL0436 capability already registered | lessons-learnt/wflyctl0436-capability-leak.md | elytron-doohickey-guide.md |
+| Join the Elytron lock from an external extension | elytron-doohickey-guide.md | - |
 | Add management attribute | feature-implementation-guide.md | management-model-version-bump-guide.md |
 | Add XML configuration option | feature-implementation-guide.md | schema-version-bump-guide.md |
 | Bump management model version | management-model-version-bump-guide.md | schema-version-bump-guide.md |
@@ -131,7 +148,13 @@ Located in `feature-development/`:
 - **Parser**: schema-version-bump-guide.md, feature-implementation-guide.md
 - **Runtime integration**: feature-implementation-guide.md
 - **ElytronDoohickey**: elytron-doohickey-guide.md
+- **DoohickeySimultaneity**: elytron-doohickey-guide.md
 - **Early runtime API access**: elytron-doohickey-guide.md
+- **Capability leak**: lessons-learnt/wflyctl0436-capability-leak.md
+- **WFLYCTL0436**: lessons-learnt/wflyctl0436-capability-leak.md
+- **createRemoveHandler**: lessons-learnt/wflyctl0436-capability-leak.md, elytron-doohickey-guide.md
+- **LDAP key-store early access**: lessons-learnt/doohickey-over-eager-adaptation.md
+- **Over-eager doohickey**: lessons-learnt/doohickey-over-eager-adaptation.md
 - **Backward compatibility**: feature-implementation-guide.md, management-model-version-bump-guide.md
 - **System properties**: feature-implementation-guide.md
 - **Test coverage**: subsystem-schema-test-requirements.md
@@ -186,5 +209,5 @@ This index should be updated when:
 
 ---
 
-**Last Updated**: 2026-09-26
-**Index Version**: 1.4
+**Last Updated**: 2026-09-28
+**Index Version**: 1.5
