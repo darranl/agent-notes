@@ -271,26 +271,11 @@ elytron.properties-realm.brute-force-protection.max-cached-sessions=Maximum numb
 
 ### Error Message Strings
 
-**Rule**: Error messages also need constants and may need resource bundle entries.
+**Rule**: Declare exceptions and diagnostic messages that may reach end users in the module's JBoss Logging typed message interface, such as `ElytronMessages`. This supplies message identifiers and supports translation. Preserve underlying exception causes with `@Cause`.
 
-**Location Pattern**:
-- Constants in `ElytronDescriptionConstants.java`
-- Bundle entries in `LocalDescriptions.properties` if user-facing
-- Internal exceptions can use inline strings for developer-facing messages
+`ElytronDescriptionConstants.java` holds management names and description keys; `LocalDescriptions.properties` supplies management attribute and operation descriptions. These do not replace typed exception messages.
 
-**Example** (if WFCORE-7193 had validation errors):
-```java
-// ElytronDescriptionConstants.java
-String BF_INVALID_LOCKOUT = "invalid-lockout-interval";
-
-// LocalDescriptions.properties
-elytron.brute-force-protection.invalid-lockout-interval=Lockout interval must be -1 or positive value in minutes.
-
-// Usage in code
-throw new OperationFailedException(
-    ElytronMessages.log.invalidValue(
-        BF_LOCKOUT_INTERVAL, value, BF_INVALID_LOCKOUT));
-```
+Use typed messages for INFO, WARN and ERROR logs, inline messages for DEBUG and TRACE, and prefer TRACE for diagnostics that may occur per request. See the [logging and message guide](../general-development/logging-and-message-guide.md) for examples, ID allocation, and UI strings that intentionally omit an ID.
 
 ## Implementation Patterns
 

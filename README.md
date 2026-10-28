@@ -24,6 +24,7 @@ This repository focuses on the day-to-day work of engineers developing WildFly E
 ## Structure
 
 Content is organized by topic in subdirectories:
+- **`general-development/`** - Requirements and conventions for all code changes, including logging and user-facing messages
 - **`feature-development/`** - Guides for implementing and reviewing features
 - Additional directories will be added as content grows
 
