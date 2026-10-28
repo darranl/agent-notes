@@ -82,6 +82,12 @@ Located in `lessons-learnt/`:
   - **Key Topics**: Partial early initialization, silently degraded security behavior, when service-only is the right answer
 
 #### Testing Requirements
+
+- **[tls-test-certificate-generation-guide.md](feature-development/tls-test-certificate-generation-guide.md)**
+  - **Purpose**: Generate TLS identities and matching PEM/JKS material during test setup
+  - **Use When**: Writing HTTPS, mutual-TLS or certificate-authentication tests
+  - **Key Topics**: Elytron certificate builders, keytool, CA/leaf roles, SANs, cleanup, cache-independent verification
+
 - **[subsystem-schema-test-requirements.md](feature-development/subsystem-schema-test-requirements.md)**
   - **Purpose**: Requirements for WildFly subsystem schema test files
   - **Use When**: Creating or updating test XML files for schema versions
@@ -110,6 +116,7 @@ Located in `lessons-learnt/`:
 | Add XML configuration option | feature-implementation-guide.md | schema-version-bump-guide.md |
 | Bump management model version | management-model-version-bump-guide.md | schema-version-bump-guide.md |
 | Bump schema version | schema-version-bump-guide.md | management-model-version-bump-guide.md |
+| Generate TLS test certificates and stores | tls-test-certificate-generation-guide.md | - |
 | Create/update test files | subsystem-schema-test-requirements.md | schema-version-bump-guide.md |
 | Promote feature stability | Both version bump guides | subsystem-schema-test-requirements.md |
 | Review version bump PR | Both version bump guides | - |
@@ -157,6 +164,7 @@ Located in `lessons-learnt/`:
 - **Over-eager doohickey**: lessons-learnt/doohickey-over-eager-adaptation.md
 - **Backward compatibility**: feature-implementation-guide.md, management-model-version-bump-guide.md
 - **System properties**: feature-implementation-guide.md
+- **TLS certificates / keystores / PEM / JKS / mutual TLS**: tls-test-certificate-generation-guide.md
 - **Test coverage**: subsystem-schema-test-requirements.md
 - **Stability levels**: All guides (PREVIEW, COMMUNITY, DEFAULT, EXPERIMENTAL)
 - **PR review**: management-model-version-bump-guide.md, schema-version-bump-guide.md
