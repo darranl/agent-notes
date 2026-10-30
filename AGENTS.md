@@ -21,6 +21,8 @@ agent-notes/
 ├── INDEX.md                          # START HERE - navigation index
 ├── README.md                         # Repository overview
 ├── AGENTS.md                         # This file - minimal agent guidance
+├── general-development/              # Requirements for all code changes
+│   └── logging-and-message-guide.md
 ├── feature-development/              # WildFly development guides
 │   ├── management-model-version-bump-guide.md
 │   ├── schema-version-bump-guide.md

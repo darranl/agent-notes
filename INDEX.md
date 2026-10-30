@@ -37,11 +37,21 @@ Located in `reproducer-development/`:
   - **Key Topics**: Authentication mechanism definitions, integrated-jaspi configuration, IdentityStore setup, multi-WAR EAR bugs, Soteria version override
   - **Related To**: wildfly-deployment-reproducer-guide.md, wildfly-development-workflow.md
 
+### General Development Guides
+
+Located in `general-development/`. These requirements apply to all code changes, including bug fixes, refactoring, maintenance and new features.
+
+- **[logging-and-message-guide.md](general-development/logging-and-message-guide.md)**
+  - **Purpose**: Conventions for logging, typed exceptions and translatable user-facing messages
+  - **Use When**: Adding or reviewing messages, selecting log levels, or allocating Elytron message IDs
+  - **Key Topics**: JBoss Logging annotations, message IDs and translation, UI strings without IDs, inline DEBUG/TRACE, per-request TRACE, `ELY_Messages.txt` range reservations
+
 ### Feature Development Guides
 
 Located in `feature-development/`:
 
 #### Feature Implementation
+
 - **[feature-implementation-guide.md](feature-development/feature-implementation-guide.md)**
   - **Purpose**: Guide for implementing new features in WildFly subsystems (after version bumps)
   - **Use When**: Adding new management attributes, XML configuration options, or subsystem capabilities
@@ -108,6 +118,8 @@ Located in `lessons-learnt/`:
 | Override component versions | wildfly-development-workflow.md | wildfly-deployment-reproducer-guide.md |
 | Override Soteria version | jakarta-ee-security-patterns.md | wildfly-development-workflow.md |
 | Implement new subsystem feature | feature-implementation-guide.md | Both version bump guides + test requirements |
+| Add logging or user-facing exception messages | logging-and-message-guide.md | - |
+| Choose log levels or reserve Elytron message IDs | logging-and-message-guide.md | - |
 | Adapt an Elytron resource for early runtime access | elytron-doohickey-guide.md | feature-implementation-guide.md, lessons-learnt/doohickey-over-eager-adaptation.md |
 | Decide if a resource should get early-access support | lessons-learnt/doohickey-over-eager-adaptation.md | elytron-doohickey-guide.md |
 | Fix WFLYCTL0436 capability already registered | lessons-learnt/wflyctl0436-capability-leak.md | elytron-doohickey-guide.md |
@@ -145,6 +157,9 @@ Located in `lessons-learnt/`:
 - **Component override**: wildfly-development-workflow.md
 - **Version bump**: management-model-version-bump-guide.md, schema-version-bump-guide.md
 - **Feature implementation**: feature-implementation-guide.md
+- **Logging / log levels / DEBUG / TRACE / per-request messages**: logging-and-message-guide.md
+- **Message IDs / ELY_Messages.txt / ID range reservations**: logging-and-message-guide.md
+- **Translation / internationalization / typed exceptions / Message.NONE**: logging-and-message-guide.md
 - **OBJECT attribute**: feature-implementation-guide.md
 - **Attribute definition**: feature-implementation-guide.md, management-model-version-bump-guide.md
 - **String constants**: feature-implementation-guide.md
@@ -217,5 +232,5 @@ This index should be updated when:
 
 ---
 
-**Last Updated**: 2026-09-28
-**Index Version**: 1.5
+**Last Updated**: 2026-10-28
+**Index Version**: 1.6
