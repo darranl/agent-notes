@@ -281,7 +281,8 @@ public void initialize(ExtensionContext context) {
 3. Add the previous version to the target versions array in `buildAndRegister()`
 
 **CRITICAL: Method Ordering**:
-- **The `fromX()` methods MUST be defined in ASCENDING order in the file** (from2, from3, from4, from5, from6)
+- **Check the existing order in the file first and follow it.** The elytron-oidc-client convention below is ascending; the **wildfly-core `elytron` subsystem's `ElytronSubsystemTransformers.java` defines them in DESCENDING order** (`from20`, `from19`, `from18`, … newest first), so a new `from21()` goes above `from20()` there.
+- **elytron-oidc-client: the `fromX()` methods MUST be defined in ASCENDING order in the file** (from2, from3, from4, from5, from6)
 - This is the opposite of how they are CALLED in `registerTransformers()` (which calls them in descending order: from6, from5, from4...)
 - **Incorrect ordering will cause confusion during code review and makes the code harder to maintain**
 - When adding a new `fromX()` method, place it at the END of the transformer methods, just before the closing brace of the class
@@ -327,7 +328,7 @@ private static void from6(ChainedTransformationDescriptionBuilder chainedBuilder
 }
 ```
 
-**Note on Method Ordering**: The transformer methods are called in descending order (from6, from5, from4...) in `registerTransformers()`, but they must be defined in the file in ascending order (from2, from3, from4, from5, from6). This maintains code readability and follows the natural progression of version history.
+**Note on Method Ordering**: The transformer methods are called in descending order (from6, from5, from4...) in `registerTransformers()`. In elytron-oidc-client they are defined in the file in ascending order (from2, from3, from4, from5, from6), which follows the natural progression of version history. The wildfly-core `elytron` subsystem defines them in descending order instead; always follow the existing file.
 
 **Important Notes**:
 - The transformer method defines how to transform FROM the new version TO the previous version
@@ -378,6 +379,8 @@ import static org.wildfly.extension.elytron.oidc.ElytronOidcClientSubsystemModel
    git log --oneline -- wildfly/elytron-oidc-client/src/test/java/org/wildfly/extension/elytron/oidc/ElytronOidcClientSubsystemTransformerTestCase.java
    ```
 
+**Elytron subsystem (wildfly-core) variation**: `SubsystemTransformerTestCase` (`elytron/src/test/java/org/wildfly/extension/elytron/`) has no `parameters()` method. It has one explicit `@Test` per controller version (e.g. `testTransformerEAP810()`, `testTransformerWFLY41()`). When a new `ModelTestControllerVersion` is added (e.g. `WILDFLY_41_0_0` was added by WFCORE-7659), add a matching test method there. Adding the enum constant itself is a wildfly-core-wide change (`model-test` `ModelTestControllerVersion`, `core-model-test` `TransformersTestParameter`), so treat it as its own change rather than part of the Elytron bump.
+
 **What to Do**:
 1. **Always check**: Review available `ModelTestControllerVersion` values to see if new controller versions have been added
 2. If a new controller version exists that should be tested, add a new test parameter entry
@@ -409,7 +412,7 @@ After making the changes, verify:
 1. **Compilation**: The code compiles without errors
 2. **Version Consistency**: All references to the new version are consistent
 3. **Transformer Chain Call Order**: The transformer chain calls in `registerTransformers()` are properly ordered (newest to oldest: from6, from5, from4...)
-4. **Transformer Method Definition Order**: The `fromX()` method definitions in the file are in ascending order (from2, from3, from4, from5, from6)
+4. **Transformer Method Definition Order**: The `fromX()` method definitions follow the existing file's order (ascending in elytron-oidc-client: from2, from3, from4, from5, from6; descending in wildfly-core `elytron`: from20, from19, from18...)
 5. **Target Versions Array**: All intermediate versions are included in the array
 6. **Comments**: WildFly version comments are accurate and helpful
 
@@ -427,7 +430,7 @@ When bumping the version without any model changes:
 
 **Commit Strategy**:
 - **Minimum**: Version bump should be in its own commit to make PR review easier
-- **Recommended**: Create a dedicated topic branch for the version bump and publish to `https://github.com/wildfly-security-incubator/wildfly`
+- **Recommended**: Create a dedicated topic branch for the version bump and publish to the `wildfly-security-incubator` fork of the repository you are working in (e.g. `https://github.com/wildfly-security-incubator/wildfly-core` for the Elytron subsystem, `.../wildfly` for elytron-oidc-client)
   - This allows others to share the commit without duplication
   - Keeps the version bump isolated and reusable
   - Makes it easier to coordinate changes across multiple contributors
@@ -860,7 +863,7 @@ For a pure management model version bump:
 - [ ] Update `CURRENT` constant to point to new version
 - [ ] Add WildFly version comment to new constant
 - [ ] Add static import for new version in `ElytronOidcSubsystemTransformers.java`
-- [ ] Create new `fromX()` transformer method in ascending order (after the previous `fromX-1()` method)
+- [ ] Create new `fromX()` transformer method following the file's existing order (elytron-oidc-client: ascending, after `fromX-1()`; wildfly-core `elytron`: descending, before `fromX-1()`)
 - [ ] Add `fromX()` call to transformer chain in `registerTransformers()` (in descending order, before the previous `fromX-1()` call)
 - [ ] Add previous version to target versions array in `buildAndRegister()`
 - [ ] Update transformer tests if needed (typically only when adding new controller version to test against)
@@ -868,20 +871,26 @@ For a pure management model version bump:
 - [ ] Verify compilation succeeds
 - [ ] Run transformer tests to verify backward compatibility
 - [ ] Verify transformer chain call order is correct (descending: from6, from5, from4...)
-- [ ] Verify transformer method definition order is correct (ascending: from2, from3, from4, from5, from6)
+- [ ] Verify transformer method definition order matches the existing file (elytron-oidc-client ascending: from2, from3, ...; wildfly-core `elytron` descending: from20, from19, ...)
 - [ ] Document the reason for the version bump
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.3
 **Created**: 2026-05-27
-**Last Updated**: 2026-09-11
+**Last Updated**: 2026-11-02
 **Target Issue**: WFLY-21934
 **Related Docs**:
 - `oidc-promotion-tracker.md` - Overall project tracker
 - `wfly-21934-model-schema-work.md` - Detailed work log (to be created)
 
 ## Revision History
+
+### Version 1.3 (2026-11-02)
+Corrections found while preparing the WildFly 43 Elytron bumps (#21):
+- `fromX()` definition order: follow the existing file (elytron-oidc-client ascending; wildfly-core `elytron` descending)
+- Documented that the Elytron `SubsystemTransformerTestCase` has one explicit `@Test` per `ModelTestControllerVersion` rather than a `parameters()` method
+- Incubator publish location is the `wildfly-security-incubator` fork of the repository being worked in
 
 ### Version 1.2 (2026-09-12)
 Added critical version bump check requirements:
