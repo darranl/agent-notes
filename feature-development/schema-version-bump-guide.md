@@ -833,11 +833,20 @@ static final Map<Stability, ElytronOidcSubsystemSchema> CURRENT =
 - **PREVIEW** → Uses `VERSION_4_0_PREVIEW` when server runs at PREVIEW stability
 - **COMMUNITY** → Uses `VERSION_2_0_COMMUNITY` when server runs at COMMUNITY stability
 - **DEFAULT** → Uses `VERSION_2_0` when server runs at DEFAULT stability
-- **EXPERIMENTAL** → Not listed (no current EXPERIMENTAL schema)
+- **EXPERIMENTAL** → Not passed to `Feature.map()` (no current EXPERIMENTAL schema), but the returned map still
+  contains an entry for it: the PREVIEW schema (`VERSION_4_0_PREVIEW`), by fallback
+
+**Explicit schemas vs. the expanded map**:
+
+The `EnumSet` supplies one explicit schema for each stability level with its own current format. `Feature.map(...)`
+then fills unspecified levels from the nearest available more stable level. With explicit DEFAULT, COMMUNITY and
+PREVIEW schemas, EXPERIMENTAL maps to the PREVIEW schema. With only DEFAULT and COMMUNITY schemas, both PREVIEW and
+EXPERIMENTAL map to the COMMUNITY schema. A fallback mapping does not create a distinct schema or namespace for that
+stability level. Trace `Feature.map()` and `Stability.map()` when checking writer selection.
 
 **Why This Matters**:
 - When the server persists configuration, it uses the schema version for its current stability level
-- If a stability level isn't in the CURRENT map, it falls back to the next higher stability level
+- If a stability level isn't passed to `Feature.map()`, the returned map falls back to the next more stable level
 - Example: If running at COMMUNITY but no COMMUNITY schema exists, it uses DEFAULT schema
 
 **When Adding a New Schema Version**:
@@ -2144,7 +2153,7 @@ No current PREVIEW schema versions.
 
 ### pom.xml Exclusions for Non-DEFAULT Schemas
 
-**Critical**: When adding COMMUNITY, PREVIEW, or EXPERIMENTAL schema versions, you must update `pom.xml` to exclude those test files from default XSD validation.
+**Critical**: Ensure non-DEFAULT test fixtures (COMMUNITY, PREVIEW, EXPERIMENTAL and `legacy-` files) are excluded from validation against the DEFAULT XSD. Add an exclusion when introducing a stability level that is not already covered by an existing pattern; a later version at an already-covered level normally needs no `pom.xml` change.
 
 **Why**: The xml-maven-plugin validates test XML files against the default schema (`wildfly-elytron_19_0.xsd`). Test files for other stability levels use different namespaces and will fail validation against the default schema.
 
@@ -2185,9 +2194,13 @@ No current PREVIEW schema versions.
 ```
 
 **When to Add**:
-- Adding COMMUNITY schema → Add `<exclude>elytron-subsystem-community*.xml</exclude>`
-- Adding PREVIEW schema → Add `<exclude>elytron-subsystem-preview*.xml</exclude>`
-- Adding EXPERIMENTAL schema → Add `<exclude>elytron-subsystem-experimental*.xml</exclude>`
+- Adding the first COMMUNITY schema → Add `<exclude>elytron-subsystem-community*.xml</exclude>`
+- Adding the first PREVIEW schema → Add `<exclude>elytron-subsystem-preview*.xml</exclude>`
+- Adding the first EXPERIMENTAL schema → Add `<exclude>elytron-subsystem-experimental*.xml</exclude>`
+
+**When No Change Is Needed**: The patterns are wildcards. For example, `elytron-subsystem-community*.xml` covers both community:19.0 and community:20.0, and `legacy*.xml` covers renamed historical fixtures. Bumping COMMUNITY from 19.0 to 20.0 therefore needs no POM edit (WFCORE-7749).
+
+**Where Matching-Schema Validation Happens**: The exclusion only stops the DEFAULT-XSD check. Each fixture is still validated against its own schema by `testSchema()` in the parameterized subsystem schema test (`AbstractSubsystemSchemaTest` / `AbstractSubsystemBaseTest.testSchema()`), which also parses and marshals it. Confirm that test still runs `testSchema()` for the new version; the Maven exclusion alone is not evidence of matching-schema validation.
 
 **Build Error Without This**:
 ```
