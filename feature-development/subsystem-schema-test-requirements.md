@@ -21,7 +21,7 @@ Test file naming depends on whether the schema version is in the subsystem's `CU
 
 **Historical Schema Versions** (NOT in CURRENT map):
 - `legacy-{subsystem-name}-{version}.xml` - For DEFAULT stability (e.g., `legacy-elytron-subsystem-18.0.xml`)
-- `legacy-{subsystem-name}-{stability}-{version}.xml` - For other stabilities (e.g., `legacy-elytron-subsystem-community-18.0.xml`)
+- `legacy-{subsystem-name}-{stability}-{version}.xml` - For other stabilities (e.g., `legacy-elytron-subsystem-community-19.0.xml` once community:19.0 leaves `CURRENT`; note `elytron-subsystem-community-18.0.xml` is a hard-coded exception, see below)
 
 ### Schema Lifecycle and Test File Management
 
@@ -53,7 +53,9 @@ static final Map<Stability, ElytronSubsystemSchema> CURRENT = Feature.map(
 Test files:
 - `elytron-subsystem-19.0.xml` (DEFAULT, in CURRENT)
 - `elytron-subsystem-community-19.0.xml` (COMMUNITY, in CURRENT)
-- `legacy-elytron-subsystem-community-18.0.xml` (COMMUNITY, NOT in CURRENT)
+- `elytron-subsystem-community-18.0.xml` (COMMUNITY, NOT in CURRENT - the one exception that keeps its non-`legacy-` name; `ElytronMixedStabilitySubsystemParsingTestCase.readResource` special-cases `community-18.0`)
+
+When community:19.0 is later replaced in `CURRENT` (e.g. by community:20.0), rename `elytron-subsystem-community-19.0.xml` to `legacy-elytron-subsystem-community-19.0.xml`.
 
 ## Test Requirements
 
@@ -515,6 +517,11 @@ When tests run correctly:
 - Stability Levels: `org.jboss.as.version.Stability` enum
 
 ## Version History
+
+### 2026-11-02 - Test File Naming Correction (#21)
+
+- Documented that `elytron-subsystem-community-18.0.xml` is a hard-coded exception to the `legacy-` prefix rule (`ElytronMixedStabilitySubsystemParsingTestCase.readResource`)
+- Replaced the non-existent `legacy-elytron-subsystem-community-18.0.xml` examples with `legacy-elytron-subsystem-community-19.0.xml` (the future name once community:19.0 leaves `CURRENT`)
 
 ### 2026-09-11 - WFCORE-7193 Lessons Integration
 

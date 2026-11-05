@@ -281,11 +281,10 @@ public void initialize(ExtensionContext context) {
 3. Add the previous version to the target versions array in `buildAndRegister()`
 
 **CRITICAL: Method Ordering**:
-- **The `fromX()` methods MUST be defined in ASCENDING order in the file** (from2, from3, from4, from5, from6)
+- **Check the existing order in the file first and follow it.** The elytron-oidc-client convention below is ascending; the **wildfly-core `elytron` subsystem's `ElytronSubsystemTransformers.java` defines them in DESCENDING order** (`from20`, `from19`, `from18`, … newest first), so a new `from21()` goes above `from20()` there.
+- In elytron-oidc-client, place the new method after the previous `fromX()` method. In wildfly-core Elytron, place it before the previous method, following the file's descending definition order.
 - This is the opposite of how they are CALLED in `registerTransformers()` (which calls them in descending order: from6, from5, from4...)
 - **Incorrect ordering will cause confusion during code review and makes the code harder to maintain**
-- When adding a new `fromX()` method, place it at the END of the transformer methods, just before the closing brace of the class
-- Example: When adding `from6()`, it should be defined AFTER `from5()` in the file, even though it's called BEFORE `from5()` in `registerTransformers()`
 
 **Example Pattern**:
 ```java
@@ -327,11 +326,12 @@ private static void from6(ChainedTransformationDescriptionBuilder chainedBuilder
 }
 ```
 
-**Note on Method Ordering**: The transformer methods are called in descending order (from6, from5, from4...) in `registerTransformers()`, but they must be defined in the file in ascending order (from2, from3, from4, from5, from6). This maintains code readability and follows the natural progression of version history.
+**Note on Method Ordering**: The transformer methods are called in descending order (from6, from5, from4...) in `registerTransformers()`. In elytron-oidc-client they are defined in the file in ascending order (from2, from3, from4, from5, from6), which follows the natural progression of version history. The wildfly-core `elytron` subsystem defines them in descending order instead; always follow the existing file.
 
 **Important Notes**:
 - The transformer method defines how to transform FROM the new version TO the previous version
-- If this is a pure version bump with no model changes, the method body can be empty
+- For a pure bump, "empty transformer" means a builder for the new-version → previous-version delta with no feature-specific rules. Follow the subsystem's existing `fromX()` pattern and call `chainedBuilder.createBuilder(newVersion, previousVersion)`.
+- Also add the previous version to `buildAndRegister()`'s target array. Check this array explicitly: successful tests against older targets do not establish that the immediate previous version is registered. The chained builder can supply empty deltas automatically, so a missing explicit builder may also be hidden until feature rules are added.
 - If model changes are being made, transformation rules must be added (but that's a separate task)
 
 ### Step 4: Update Import Statements
@@ -378,6 +378,8 @@ import static org.wildfly.extension.elytron.oidc.ElytronOidcClientSubsystemModel
    git log --oneline -- wildfly/elytron-oidc-client/src/test/java/org/wildfly/extension/elytron/oidc/ElytronOidcClientSubsystemTransformerTestCase.java
    ```
 
+**Elytron subsystem (wildfly-core) variation**: `SubsystemTransformerTestCase` (`elytron/src/test/java/org/wildfly/extension/elytron/`) has no `parameters()` method. It has one explicit `@Test` per controller version (e.g. `testTransformerEAP810()`, `testTransformerWFLY41()`). When a new `ModelTestControllerVersion` is added (e.g. `WILDFLY_41_0_0` was added by WFCORE-7659), add a matching test method there. Adding the enum constant itself is a wildfly-core-wide change (`model-test` `ModelTestControllerVersion`, `core-model-test` `TransformersTestParameter`), so treat it as its own change rather than part of the Elytron bump.
+
 **What to Do**:
 1. **Always check**: Review available `ModelTestControllerVersion` values to see if new controller versions have been added
 2. If a new controller version exists that should be tested, add a new test parameter entry
@@ -409,9 +411,10 @@ After making the changes, verify:
 1. **Compilation**: The code compiles without errors
 2. **Version Consistency**: All references to the new version are consistent
 3. **Transformer Chain Call Order**: The transformer chain calls in `registerTransformers()` are properly ordered (newest to oldest: from6, from5, from4...)
-4. **Transformer Method Definition Order**: The `fromX()` method definitions in the file are in ascending order (from2, from3, from4, from5, from6)
+4. **Transformer Method Definition Order**: The `fromX()` method definitions follow the existing file's order (ascending in elytron-oidc-client: from2, from3, from4, from5, from6; descending in wildfly-core `elytron`: from20, from19, from18...)
 5. **Target Versions Array**: All intermediate versions are included in the array
-6. **Comments**: WildFly version comments are accurate and helpful
+6. **Comments**: WildFly version comments are accurate and helpful (following subsystem conventions)
+7. **Focused-Test Dependency Preparation**: A focused `mvn -pl <module> test` (such as `mvn -pl elytron test`) requires matching sibling SNAPSHOT artifacts in `~/.m2`. In a fresh checkout or after a project version bump, run a reactor `mvn install -DskipTests` first (or `mvn install -DallTests -DskipTests` if visiting all modules in an `allTests` profile build is needed) to populate local artifacts before running focused tests. `-am test` does not install sibling artifacts for later resolution.
 
 ## Common Patterns and Best Practices
 
@@ -422,12 +425,13 @@ After making the changes, verify:
 When bumping the version without any model changes:
 - Add the new version constant
 - Update `CURRENT`
-- Add an empty transformer method
+- Add an empty transformer method (calling `chainedBuilder.createBuilder(newVersion, previousVersion)` with no feature rules)
+- Add the previous version to the target array in `buildAndRegister()`
 - This reserves the version number for future use
 
 **Commit Strategy**:
 - **Minimum**: Version bump should be in its own commit to make PR review easier
-- **Recommended**: Create a dedicated topic branch for the version bump and publish to `https://github.com/wildfly-security-incubator/wildfly`
+- **Recommended**: Create a dedicated topic branch for the version bump and publish to the `wildfly-security-incubator` fork of the repository you are working in (e.g. `https://github.com/wildfly-security-incubator/wildfly-core` for the Elytron subsystem, `.../wildfly` for elytron-oidc-client)
   - This allows others to share the commit without duplication
   - Keeps the version bump isolated and reusable
   - Makes it easier to coordinate changes across multiple contributors
@@ -465,8 +469,8 @@ When reviewing PRs that modify the elytron-oidc-client subsystem management mode
   - If current main branch already has a higher version than the last .Final tag, the version is correct
   - If current main branch has the same version as the last .Final tag, a version bump is required
 - [ ] **Verify Version Bump is Separate**: If a version bump is included, it should be in its own commit
-- [ ] **Check Transformer Chain**: Ensure the transformer chain is properly updated if version was bumped
-- [ ] **Validate Version Comments**: Ensure version constants have "WildFly X.0-onwards" comments
+- [ ] **Check Transformer Chain**: Ensure the transformer chain is properly updated if version was bumped, including `buildAndRegister()` target array
+- [ ] **Validate Version Comments**: Verify that the target WildFly release is accurately recorded, following the subsystem's existing conventions. For Elytron's direct model constants, the transformer-chain release comment and `VERSIONS.md` provide this information; an inline comment on every constant is not required.
 - [ ] **No Model Changes Without Version Bump**: Reject PRs that modify the model without a corresponding version bump (unless the version was already bumped in main since the last .Final tag)
 
 ### Common Review Scenarios
@@ -824,6 +828,11 @@ If your subsystem would benefit from this documentation, create `<subsystem-root
 
 ## Troubleshooting
 
+### Issue: Focused Subsystem Test Dependency Resolution Failure
+
+**Symptoms**: `mvn -pl <module> test` fails with unresolved SNAPSHOT dependencies for sibling modules
+**Solution**: Run a reactor build `mvn install -DskipTests` (or `mvn install -DallTests -DskipTests` if visiting all modules across all profiles is needed) once to install SNAPSHOT artifacts into your local repository (`~/.m2`), then rerun the focused subsystem test. Note that `mvn test -pl <module> -am` compiles upstream dependencies in the reactor but does not install them for subsequent independent artifact resolution.
+
 ### Issue: Compilation Errors After Version Bump
 
 **Symptoms**: Missing imports, unresolved references
@@ -858,9 +867,9 @@ For a pure management model version bump:
 
 - [ ] Add new version constant to `ElytronOidcClientSubsystemModel.java`
 - [ ] Update `CURRENT` constant to point to new version
-- [ ] Add WildFly version comment to new constant
+- [ ] Document target WildFly version (WildFly version comment for enum constants, or transformer comment and `VERSIONS.md` for direct constants)
 - [ ] Add static import for new version in `ElytronOidcSubsystemTransformers.java`
-- [ ] Create new `fromX()` transformer method in ascending order (after the previous `fromX-1()` method)
+- [ ] Create new `fromX()` transformer method following the file's existing order (elytron-oidc-client: ascending, after `fromX-1()`; wildfly-core `elytron`: descending, before `fromX-1()`)
 - [ ] Add `fromX()` call to transformer chain in `registerTransformers()` (in descending order, before the previous `fromX-1()` call)
 - [ ] Add previous version to target versions array in `buildAndRegister()`
 - [ ] Update transformer tests if needed (typically only when adding new controller version to test against)
@@ -868,20 +877,26 @@ For a pure management model version bump:
 - [ ] Verify compilation succeeds
 - [ ] Run transformer tests to verify backward compatibility
 - [ ] Verify transformer chain call order is correct (descending: from6, from5, from4...)
-- [ ] Verify transformer method definition order is correct (ascending: from2, from3, from4, from5, from6)
+- [ ] Verify transformer method definition order matches the existing file (elytron-oidc-client ascending: from2, from3, ...; wildfly-core `elytron` descending: from20, from19, ...)
 - [ ] Document the reason for the version bump
 
 ---
 
-**Document Version**: 1.1
+**Document Version**: 1.3
 **Created**: 2026-05-27
-**Last Updated**: 2026-09-11
+**Last Updated**: 2026-11-02
 **Target Issue**: WFLY-21934
 **Related Docs**:
 - `oidc-promotion-tracker.md` - Overall project tracker
 - `wfly-21934-model-schema-work.md` - Detailed work log (to be created)
 
 ## Revision History
+
+### Version 1.3 (2026-11-02)
+Corrections found while preparing the WildFly 43 Elytron bumps (#21):
+- `fromX()` definition order: follow the existing file (elytron-oidc-client ascending; wildfly-core `elytron` descending)
+- Documented that the Elytron `SubsystemTransformerTestCase` has one explicit `@Test` per `ModelTestControllerVersion` rather than a `parameters()` method
+- Incubator publish location is the `wildfly-security-incubator` fork of the repository being worked in
 
 ### Version 1.2 (2026-09-12)
 Added critical version bump check requirements:
