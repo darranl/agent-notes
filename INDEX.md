@@ -53,9 +53,9 @@ Located in `feature-development/`:
 #### Feature Implementation
 
 - **[feature-implementation-guide.md](feature-development/feature-implementation-guide.md)**
-  - **Purpose**: Guide for implementing new features in WildFly subsystems (after version bumps)
-  - **Use When**: Adding new management attributes, XML configuration options, or subsystem capabilities
-  - **Key Topics**: OBJECT attributes, string handling, parser patterns, runtime integration, backward compatibility
+  - **Purpose**: Guide for verifying distribution scope and implementing new features in WildFly subsystems (after version bumps)
+  - **Use When**: Considering any edit under `legacy/`, changing distribution packaging, checking backport scope, or adding subsystem features
+  - **Key Topics**: Active distributions, Jakarta EE variants, legacy edit checks, Maven profiles, feature-pack consumers, test provisioning, OBJECT attributes, parser patterns, runtime integration, backward compatibility
   - **Related To**: Requires version bumps first; see version management guides below
   - **Prerequisites**: Coordinate version bumps in Zulip #wildfly-elytron before starting
 
@@ -118,6 +118,8 @@ Located in `lessons-learnt/`:
 | Override component versions | wildfly-development-workflow.md | wildfly-deployment-reproducer-guide.md |
 | Override Soteria version | jakarta-ee-security-patterns.md | wildfly-development-workflow.md |
 | Implement new subsystem feature | feature-implementation-guide.md | Both version bump guides + test requirements |
+| Check whether a legacy module should change | [feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging](feature-development/feature-implementation-guide.md#verify-target-distributions-before-changing-packaging) | - |
+| Verify packaging or backport distribution scope | [feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging](feature-development/feature-implementation-guide.md#verify-target-distributions-before-changing-packaging) | - |
 | Add logging or user-facing exception messages | logging-and-message-guide.md | - |
 | Choose log levels or reserve Elytron message IDs | logging-and-message-guide.md | - |
 | Adapt an Elytron resource for early runtime access | elytron-doohickey-guide.md | feature-implementation-guide.md, lessons-learnt/doohickey-over-eager-adaptation.md |
@@ -163,6 +165,8 @@ Located in `lessons-learnt/`:
 - **Host excludes / host-release / KnownRelease / KernelAPIVersion**: management-model-version-bump-guide.md
 - **Historical tags / GitHub MCP / DeepWiki**: management-model-version-bump-guide.md
 - **Feature implementation**: feature-implementation-guide.md
+- **Legacy modules / active distributions / Jakarta EE variants**: feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging
+- **Distribution packaging / Maven profiles / feature-pack consumers / backport scope**: feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging
 - **Logging / log levels / DEBUG / TRACE / per-request messages**: logging-and-message-guide.md
 - **Message IDs / ELY_Messages.txt / ID range reservations**: logging-and-message-guide.md
 - **Translation / internationalization / typed exceptions / Message.NONE**: logging-and-message-guide.md
@@ -239,4 +243,4 @@ This index should be updated when:
 ---
 
 **Last Updated**: 2026-11-18
-**Index Version**: 1.7
+**Index Version**: 1.8
