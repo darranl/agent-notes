@@ -4,11 +4,11 @@
 
 This guide covers the implementation of new features in WildFly subsystems, focusing on the Elytron subsystem patterns learned from WFCORE-7193 (brute force protection configuration).
 
-**Scope**: Verify distribution scope before changing packaging or working under `legacy/`. Subsystem feature implementation follows any required version bumps - see the version bump guides first.
+**Scope**: Verify distribution scope before changing packaging or working under `legacy/`, implement subsystem features, and verify integration test execution and user documentation. Subsystem feature implementation follows any required version bumps - see the version bump guides first.
 
 **Relationship to Other Guides**:
 - **Prerequisites**: Read `management-model-version-bump-guide.md` and `schema-version-bump-guide.md` first
-- **Testing**: See `subsystem-schema-test-requirements.md` for test requirements
+- **Testing**: See `subsystem-schema-test-requirements.md` for schema test requirements and [Verify Integration Test Execution](#verify-integration-test-execution) for runtime test wiring and evidence
 - **Workflow**: Verify target distributions → Required version bumps → Feature implementation (this guide) → Testing
 
 **Important Distinction**:
@@ -712,6 +712,29 @@ PersistentResourceXMLDescription realmParser_19_0_community = decorateRealms(
 - Parser only: XML parsed but not stored in model
 - XSD only: XML validates but parser doesn't handle it
 
+## Verify Integration Test Execution
+
+A successful build or test compilation does not establish that the intended integration tests ran. Choose the modes relevant to the feature's supported scope, such as standard or Preview distributions, managed or bootable servers, domain operation, and applicable stability levels. These are separate dimensions; a distribution name does not establish the server's stability level.
+
+For each intended mode:
+
+1. **Trace selection and execution.** Follow the active Maven profiles from the aggregator to the test module, selected feature-pack coordinates, server provisioning and Surefire/Failsafe executions. Check execution phases, includes, excludes and skip properties. When inheritance or profile merging is unclear, inspect the effective POM with the same properties and reactor context as the intended run. Module selection alone does not prove test execution.
+2. **Check prerequisites and endpoints.** Ensure focused runs can resolve the matching sibling and test-support artifacts selected by those profiles. A preparation build for one mode may omit artifacts needed by another. Follow the harness's address and port properties through both server startup and client configuration, including IPv6 URL formatting where applicable; avoid hard-coded endpoints that bypass those properties.
+3. **Confirm the actual run.** Inspect provisioning/startup evidence for the selected distribution, launch mode and stability level. Use reports from that invocation to check expected test identities, counts, failures, errors and skips, including imported tests. Investigate missing tests and unexpected skips; explain expected mode-specific skips. Report totals alone do not establish which scenarios executed.
+4. **Bound the conclusion.** State the source revision, relevant component versions, mode and result. Distinguish effective-model checks, compilation and executed runtime tests. If a mode was not run, leave its verification open rather than extending another mode's result to it.
+
+Execution may be local, on another machine or in CI according to the project's workflow. Separate report directories per mode can help prevent stale results being mistaken for fresh evidence; checking report timestamps and invocation details is another option. No particular machine, directory layout or log naming scheme is required by this guidance.
+
+## Verify User Documentation and Examples
+
+Review documentation against the implementation for the target release and the public subsystem interface. Underlying library initialization properties are not management attributes unless the subsystem exposes them. Check registered attributes and operations, defaults, supported values, stability restrictions and XML parsing behavior; management resource descriptions can supplement source inspection.
+
+- **Follow the reader's sequence.** Establish prerequisites, enable the feature, configure it, consume it and verify the result. Keep names and sample data consistent. Mark alternative configurations explicitly so following an HTTPS example after an HTTP example does not accidentally add an existing resource again. Distinguish domain profile configuration from managed-server runtime operations where relevant.
+- **Check the commands users receive.** Validate CLI syntax, quoting and multiline continuations, including protection of expressions from shell expansion. Offline CLI parsing can check syntax without a running server; it does not prove resource availability or runtime behavior. Parse XML/JSON samples and inspect rendered output where appropriate. Successful rendering alone does not make examples executable. Exercise relevant end-to-end examples when claiming runtime verification, and state any checks not performed.
+- **Explain behavior and migration precisely.** Distinguish expression support from the management stage at which resolution occurs. Describe initialization dependencies, caching and refresh behavior when relevant. Identify removed settings, required pre-start configuration changes and rollback limitations. Use examples that retain their intended meaning under the documented stability and compatibility settings; do not infer upgrade compatibility from continued registration of an old XML namespace.
+
+Keep example verification proportionate to the change. Existing automated coverage can supply evidence when it exercises the documented path and configuration; a new full test matrix is not required for every documentation edit.
+
 ## Complete Implementation Checklist
 
 Use this checklist to ensure complete implementation:
@@ -781,6 +804,13 @@ Use this checklist to ensure complete implementation:
 - [ ] Element ordering matches marshaller output
 - [ ] Tests pass: `SubsystemParsingTestCase`
 - [ ] Tests pass: `[Subsystem]MixedStabilitySubsystemParsingTestCase` (if multi-stability)
+- [ ] Intended integration test modes actually execute the expected tests; provisioning, endpoints and fresh reports checked using [Verify Integration Test Execution](#verify-integration-test-execution)
+
+### User Documentation
+
+- [ ] Documented settings match the public subsystem interface for the target release
+- [ ] Examples form a coherent sequence, alternatives are explicit, and syntax/rendering checks are distinguished from runtime verification
+- [ ] Applicable runtime restrictions and migration requirements are documented using [Verify User Documentation and Examples](#verify-user-documentation-and-examples)
 
 ## Common Pitfalls
 
@@ -861,6 +891,7 @@ Use this checklist to ensure complete implementation:
 
 ## Revision History
 
+- **2026-11-23**: Added integration test execution checks and public-interface/example verification guidance (#27).
 - **2026-11-18**: Added target distribution verification before packaging changes, explicit `legacy/` checks, shared resource tracing and branch-specific backport applicability (#25).
 - **2026-09-12**: Initial version (v1.0) based on WFCORE-7193 implementation patterns
   - Covers OBJECT attribute patterns, string handling, runtime integration
