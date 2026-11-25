@@ -53,9 +53,9 @@ Located in `feature-development/`:
 #### Feature Implementation
 
 - **[feature-implementation-guide.md](feature-development/feature-implementation-guide.md)**
-  - **Purpose**: Guide for verifying distribution scope and implementing new features in WildFly subsystems (after version bumps)
-  - **Use When**: Considering any edit under `legacy/`, changing distribution packaging, checking backport scope, or adding subsystem features
-  - **Key Topics**: Active distributions, Jakarta EE variants, legacy edit checks, Maven profiles, feature-pack consumers, test provisioning, OBJECT attributes, parser patterns, runtime integration, backward compatibility
+  - **Purpose**: Guide for verifying distribution scope, implementing subsystem features (after version bumps), and verifying integration test execution and user documentation
+  - **Use When**: Considering any edit under `legacy/`, changing distribution packaging, checking backport scope, adding subsystem features, or reviewing test wiring and documentation examples
+  - **Key Topics**: Active distributions, Jakarta EE variants, legacy edit checks, Maven profiles, feature-pack consumers, test provisioning/execution, fresh reports, public management interface, executable examples, OBJECT attributes, parser patterns, runtime integration, backward compatibility
   - **Related To**: Requires version bumps first; see version management guides below
   - **Prerequisites**: Coordinate version bumps in Zulip #wildfly-elytron before starting
 
@@ -118,6 +118,8 @@ Located in `lessons-learnt/`:
 | Override component versions | wildfly-development-workflow.md | wildfly-deployment-reproducer-guide.md |
 | Override Soteria version | jakarta-ee-security-patterns.md | wildfly-development-workflow.md |
 | Implement new subsystem feature | feature-implementation-guide.md | Both version bump guides + test requirements |
+| Verify integration tests execute in the intended modes | [feature-implementation-guide.md — Verify Integration Test Execution](feature-development/feature-implementation-guide.md#verify-integration-test-execution) | - |
+| Review subsystem documentation and runnable examples | [feature-implementation-guide.md — Verify User Documentation and Examples](feature-development/feature-implementation-guide.md#verify-user-documentation-and-examples) | - |
 | Check whether a legacy module should change | [feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging](feature-development/feature-implementation-guide.md#verify-target-distributions-before-changing-packaging) | - |
 | Verify packaging or backport distribution scope | [feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging](feature-development/feature-implementation-guide.md#verify-target-distributions-before-changing-packaging) | - |
 | Add logging or user-facing exception messages | logging-and-message-guide.md | - |
@@ -165,6 +167,8 @@ Located in `lessons-learnt/`:
 - **Host excludes / host-release / KnownRelease / KernelAPIVersion**: management-model-version-bump-guide.md
 - **Historical tags / GitHub MCP / DeepWiki**: management-model-version-bump-guide.md
 - **Feature implementation**: feature-implementation-guide.md
+- **Integration test execution / effective POM / Surefire / Failsafe / fresh reports / client-server endpoints**: feature-implementation-guide.md — Verify Integration Test Execution
+- **Documentation verification / CLI examples / public management interface / migration guidance**: feature-implementation-guide.md — Verify User Documentation and Examples
 - **Legacy modules / active distributions / Jakarta EE variants**: feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging
 - **Distribution packaging / Maven profiles / feature-pack consumers / backport scope**: feature-implementation-guide.md — Verify Target Distributions Before Changing Packaging
 - **Logging / log levels / DEBUG / TRACE / per-request messages**: logging-and-message-guide.md
@@ -242,5 +246,5 @@ This index should be updated when:
 
 ---
 
-**Last Updated**: 2026-11-18
-**Index Version**: 1.8
+**Last Updated**: 2026-11-23
+**Index Version**: 1.9
